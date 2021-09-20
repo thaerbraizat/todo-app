@@ -1,93 +1,129 @@
-import React, { useEffect, useState } from 'react';
-import useForm from '../hooks/form';
+import React, { useEffect, useState, useContext } from "react";
+import { settingContext } from "../context/handleState";
+import { v4 as uuid } from "uuid";
+import Header from "../components/Header";
+import Footer from '../components/Footer';
+import Form from "../components/Form";
+import List from "../components/list";
+import Pagination from "../components/Pagination";
+import Settings from "../components/Setting";
+import { Container, Row, Col } from "react-bootstrap";
+import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
+const ToDo = () => {
+  const context = useContext(settingContext);
 
-import { v4 as uuid } from 'uuid';
-
-
-import { SettingsContext } from '../context/handleState';
-import {useContext} from 'react';
-
-
-    
-
-const ToDo = (props) => {
-
-    const site = useContext(SettingsContext);
-    console.log("ssssssssssssssssite)",site)
-//   const [list, setList] = useState([]);
-//   const [incomplete, setIncomplete] = useState([]);
-  const { handleChange, handleSubmit } = useForm(addItem);
+  const [list, setList] = useState([]);
+  const [incomplete, setIncomplete] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [todosPerPage, setTodosPerPage] = useState(4);
+  const [filteredList, setFilteredList] = useState([]);
 
   function addItem(item) {
-    console.log(item);
-    item.id = uuid();
-    item.complete = false;
-    setList([...site.list, item]);
+    console.log('items:',item);
+    let details = {
+      id: uuid(),
+      complete: false,
+      difficulty: item.difficulty,
+      assignee: item.assign,
+      text: item.item,
+    };
+    setList([...list, details]);
   }
 
   function deleteItem(id) {
-    const items = site.list.filter( item => item.id !== id );
+    const items = list.filter((item) => item.id !== id);
     setList(items);
   }
 
   function toggleComplete(id) {
-
-    const items = list.map( item => {
-      if ( item.id == id ) {
-        item.complete = ! item.complete;
+    const items = list.map((item) => {
+      if (item.id == id) {
+        item.complete = !item.complete;
       }
       return item;
     });
-
     setList(items);
-
   }
 
   useEffect(() => {
-    let incompleteCount = site.list.filter(item => !item.complete).length;
+    let incompleteCount = list.filter((item) => !item.complete).length;
     setIncomplete(incompleteCount);
-    document.title = `To Do List: ${site.incomplete}`;
-  }, [site.list]);
+    document.title = `To Do List: ${incomplete}`;
+  }, [list]);
+
+  useEffect(() => {
+    setTodosPerPage(context.elementsPerPage);
+  });
+
+  useEffect(() => {
+    if (context.showCompleted === true) {
+      let InCompletedTasks = list.filter((item) =>
+        item.complete === false ? item : null
+      );
+      console.log(InCompletedTasks);
+      setFilteredList(InCompletedTasks);
+    }
+  }, [context.detectStorage]);
+
+  let indexOfLastTodo = parseInt(currentPage) * parseInt(todosPerPage);
+
+  let indexOfFirstTodo = indexOfLastTodo - parseInt(todosPerPage);
+
+  let currentTodos = list.slice(indexOfFirstTodo, indexOfLastTodo);
+
+  let paginate = (pageNum) => setCurrentPage(pageNum);
 
   return (
     <>
-      <header>
-        <h1>To Do List: {site.incomplete} items pending</h1>
-      </header>
+      <Header />
 
-      <form onSubmit={handleSubmit}>
-
-        <h2>Add To Do Item</h2>
-
-        <label>
-          <span>To Do Item</span>
-          <input onChange={handleChange} name="text" type="text" placeholder="Item Details" />
-        </label>
-
-        <label>
-          <span>Assigned To</span>
-          <input onChange={handleChange} name="assignee" type="text" placeholder="Assignee Name" />
-        </label>
-
-        <label>
-          <span>Difficulty</span>
-          <input onChange={handleChange} defaultValue={3} type="range" min={1} max={5} name="difficulty" />
-        </label>
-
-        <label>
-          <button type="submit">Add Item</button>
-        </label>
-      </form>
-
-      {site.list.map(item => (
-        <div key={item.id}>
-          <p>{item.text}</p>
-          <p><small>Assigned to: {item.assignee}</small></p>
-          <p><small>Difficulty: {item.difficulty}</small></p>
-          <div onClick={() => toggleComplete(item.id)}>Complete: {item.complete.toString()}</div>
-          <hr />
-        </div>
-      ))}
+      <Router>
+        <Switch>
+          <Route exact path="/">
+            <Container>
+              <Row>
+                {list.length > 0 && (
+                  <h3> - To Do List: {incomplete} items pending</h3>
+                )}
+              </Row>
+              <Row>
+                <Col xs={3}>
+                  <Form addItem={addItem} />
+                </Col>
+                <Col xs={9}>
+                  {context.showCompleted === false ? (
+                    <List
+                      list={currentTodos ? currentTodos : list}
+                      toggleComplete={toggleComplete}
+                      deleteItem={deleteItem}
+                    />
+                  ) : (
+                    <List
+                      list={filteredList}
+                      toggleComplete={toggleComplete}
+                      deleteItem={deleteItem}
+                    />
+                  )}
+                </Col>
+              </Row>
+              <Row>
+                <Col xs={3}></Col>
+                <Col xs={9}>
+                  <Pagination
+                    todosPerPage={todosPerPage}
+                    totalTodos={list.length}
+                    paginate={paginate}
+                  />
+                </Col>
+              </Row>
+            </Container>
+          </Route>
+          <Route path="/settings">
+            <Settings />
+          </Route>
+        </Switch>
+      </Router>
+      <Footer/>
 
     </>
   );
