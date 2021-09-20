@@ -1,11 +1,13 @@
-import React from 'react';
+import React from "react";
+import ToDo from "./components/todo";
+import SettingsContext from './context/handleState'
 
-import ToDo from './components/todo.js';
-
-export default class App extends React.Component {
-  render() {
-    return (
+function App() {
+  return (
+    <SettingsContext>
       <ToDo />
-    );
-  }
+    </SettingsContext>
+  );
 }
+
+export default App;
